@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { UserProvider } from './UserContext';
 
 import HomeScreen from './HomeScreen';
 import LoginScreen from './LoginScreen';
@@ -15,25 +16,27 @@ const Stack = createStackNavigator();
 
 const App = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen 
-          name="Home" 
-          component={HomeScreen} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="RoomSelection" component={RoomSelection} />
-        <Stack.Screen name="CreateRoom" component={CreateRoom} />
-        <Stack.Screen name="JoinRoom" component={JoinRoom} />
-        <Stack.Screen 
-          name="Board" 
-          component={Board}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <UserProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Home">
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="SignupScreen" component={SignupScreen} />
+          <Stack.Screen name="RoomSelection" component={RoomSelection} />
+          <Stack.Screen name="CreateRoom" component={CreateRoom} />
+          <Stack.Screen name="JoinRoom" component={JoinRoom} />
+          <Stack.Screen 
+            name="Board" 
+            component={Board}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </UserProvider>
   );
 };
 

@@ -1,33 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, Button, TextInput, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { getFirestore, collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 
 const JoinRoom = ({ navigation, route }) => {
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [roomIdInput, setRoomIdInput] = useState('');
   const userEmail = route.params?.userEmail || 'Guest';
+  const [roomId, setRoomId] = useState('');
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const db = getFirestore();
 
-  // Fetch available rooms from Firestore
+  // Fetch available rooms
   useEffect(() => {
     const fetchRooms = async () => {
       try {
         setLoading(true);
         const roomsRef = collection(db, 'rooms');
-        // Query for rooms that aren't full
-        const q = query(roomsRef, where('IsFull', '==', false));
-        const querySnapshot = await getDocs(q);
+        const q = query(roomsRef, where("IsFull", "==", false)); // Only get rooms that aren't full
+        const snapshot = await getDocs(q);
         
-        const availableRooms = [];
-        querySnapshot.forEach((doc) => {
-          availableRooms.push({
+        const rooms = [];
+        snapshot.forEach(doc => {
+          rooms.push({
             id: doc.id,
             ...doc.data()
           });
         });
         
-        setRooms(availableRooms);
+        setAvailableRooms(rooms);
       } catch (error) {
         console.error("Error fetching rooms:", error);
         Alert.alert("Error", "Failed to fetch available rooms");
@@ -38,15 +37,16 @@ const JoinRoom = ({ navigation, route }) => {
 
     fetchRooms();
     
-    // Set up a timer to refresh the room list every 10 seconds
-    const refreshInterval = setInterval(fetchRooms, 10000);
-    return () => clearInterval(refreshInterval);
+    // Set up a timer to refresh the list every 10 seconds
+    const intervalId = setInterval(fetchRooms, 10000);
+    
+    // Clean up the interval when component unmounts
+    return () => clearInterval(intervalId);
   }, [db]);
 
-  const handleJoinRoom = async (roomId) => {
+  const handleJoinRoom = async (selectedRoomId) => {
     try {
-      // Check if room exists
-      const roomRef = doc(db, 'rooms', roomId);
+      const roomRef = doc(db, 'rooms', selectedRoomId);
       const roomDoc = await getDoc(roomRef);
       
       if (!roomDoc.exists()) {
@@ -56,16 +56,16 @@ const JoinRoom = ({ navigation, route }) => {
       
       const roomData = roomDoc.data();
       
-      // Check if room is full
       if (roomData.IsFull) {
-        Alert.alert("Room Full", "This room already has two players");
+        Alert.alert("Error", "Room is already full");
         return;
       }
       
-      // Navigate to the board with the room ID
-      navigation.navigate('Board', { 
-        roomId: roomId,
-        userEmail: userEmail
+      // Navigate to the Board screen with the selected room ID
+      navigation.navigate('Board', {
+        roomId: selectedRoomId,
+        userEmail: userEmail,
+        isNewRoom: false
       });
     } catch (error) {
       console.error("Error joining room:", error);
@@ -73,71 +73,59 @@ const JoinRoom = ({ navigation, route }) => {
     }
   };
 
-  const handleManualJoin = () => {
-    if (roomIdInput.trim() === '') {
+  const handleSubmitRoomId = () => {
+    if (!roomId.trim()) {
       Alert.alert("Error", "Please enter a room ID");
       return;
     }
     
-    handleJoinRoom(roomIdInput.trim());
+    handleJoinRoom(roomId.trim());
   };
-
-  const renderRoom = ({ item }) => (
-    <TouchableOpacity
-      style={styles.roomItem}
-      onPress={() => handleJoinRoom(item.id)}
-    >
-      <Text style={styles.roomId}>Room ID: {item.id}</Text>
-      <Text style={styles.roomInfo}>
-        Created by: {item.createdBy || 'Unknown'}
-      </Text>
-      <Text style={styles.roomStatus}>
-        Status: {item.whitePlayer ? 'Waiting for black player' : 'Empty'}
-      </Text>
-    </TouchableOpacity>
-  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Join a Chess Room</Text>
+      <Text style={styles.title}>Join a Room</Text>
+      <Text style={styles.subtitle}>Logged in as: {userEmail}</Text>
       
-      <View style={styles.manualJoinContainer}>
+      <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Enter Room ID"
-          value={roomIdInput}
-          onChangeText={setRoomIdInput}
+          value={roomId}
+          onChangeText={setRoomId}
         />
-        <TouchableOpacity style={styles.joinButton} onPress={handleManualJoin}>
-          <Text style={styles.joinButtonText}>Join</Text>
-        </TouchableOpacity>
+        <Button title="Join" onPress={handleSubmitRoomId} />
       </View>
       
-      <Text style={styles.availableRoomsTitle}>Available Rooms:</Text>
+      <Text style={styles.sectionTitle}>Available Rooms:</Text>
       
       {loading ? (
-        <Text style={styles.loadingText}>Loading available rooms...</Text>
-      ) : rooms.length > 0 ? (
-        <FlatList
-          data={rooms}
-          renderItem={renderRoom}
-          keyExtractor={(item) => item.id}
-          style={styles.roomList}
-        />
+        <Text>Loading rooms...</Text>
+      ) : availableRooms.length === 0 ? (
+        <Text>No available rooms found. Create a room or enter a room ID.</Text>
       ) : (
-        <Text style={styles.noRoomsText}>No available rooms found</Text>
+        <FlatList
+          data={availableRooms}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              style={styles.roomItem}
+              onPress={() => handleJoinRoom(item.id)}
+            >
+              <Text style={styles.roomId}>Room ID: {item.id}</Text>
+              <Text>Created by: {item.createdBy || 'Unknown'}</Text>
+              <Text>Status: {item.whitePlayer ? 'Waiting for opponent' : 'Open'}</Text>
+            </TouchableOpacity>
+          )}
+        />
       )}
       
-      <TouchableOpacity
-        style={styles.refreshButton}
-        onPress={() => {
-          setLoading(true);
-          // The useEffect will run again and refresh the rooms
-          setLoading(false);
-        }}
-      >
-        <Text style={styles.refreshButtonText}>Refresh Rooms</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <Button 
+          title="Back to Room Selection" 
+          onPress={() => navigation.navigate('RoomSelection')}
+        />
+      </View>
     </View>
   );
 };
@@ -151,40 +139,34 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 10,
+    color: '#333',
     textAlign: 'center',
   },
-  manualJoinContainer: {
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 20,
+    color: '#666',
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  inputContainer: {
     flexDirection: 'row',
     marginBottom: 20,
   },
   input: {
     flex: 1,
-    padding: 10,
+    height: 40,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     marginRight: 10,
-    backgroundColor: '#fff',
-  },
-  joinButton: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
-    justifyContent: 'center',
-  },
-  joinButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  availableRoomsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  roomList: {
-    flex: 1,
-    marginBottom: 10,
+    paddingHorizontal: 10,
   },
   roomItem: {
     backgroundColor: '#fff',
@@ -195,40 +177,13 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   roomId: {
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 5,
   },
-  roomInfo: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 5,
-  },
-  roomStatus: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 5,
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginVertical: 20,
-    color: '#777',
-  },
-  noRoomsText: {
-    textAlign: 'center',
-    marginVertical: 20,
-    color: '#777',
-  },
-  refreshButton: {
-    backgroundColor: '#28a745',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  refreshButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
+  buttonContainer: {
+    marginTop: 20,
+  }
 });
 
 export default JoinRoom;

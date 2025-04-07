@@ -1,21 +1,28 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'; // Import Firebase Auth
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    const auth = getAuth();
-    signInWithEmailAndPassword(auth, email, password)
-      .then(() => {
-        // Navigate to RoomSelectionScreen after successful login
-        navigation.navigate('RoomSelection');
-      })
-      .catch((error) => {
-        Alert.alert("Login Error", error.message);
-      });
+    console.log('Login button pressed');
+    
+    if (!email) {
+      Alert.alert('Error', 'Please enter an email');
+      return;
+    }
+    
+    try {
+      AsyncStorage.setItem('userEmail', email);
+      console.log('Email stored:', email);
+      
+      navigation.navigate('RoomSelection', { userEmail: email });
+    } catch (error) {
+      console.error('Error storing email:', error);
+      Alert.alert('Error', 'Login failed. Please try again.');
+    }
   };
 
   return (
@@ -26,6 +33,8 @@ const LoginScreen = ({ navigation }) => {
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
       <TextInput
         style={styles.input}
@@ -35,7 +44,15 @@ const LoginScreen = ({ navigation }) => {
         secureTextEntry
       />
       <Button title="Login" onPress={handleLogin} />
-      <Button title="Go to Signup" onPress={() => navigation.navigate('Signup')} />
+      <View style={styles.linkContainer}>
+        <Text>Don't have an account? </Text>
+        <Text 
+          style={styles.link}
+          onPress={() => navigation.navigate('SignupScreen')}
+        >
+          Sign Up
+        </Text>
+      </View>
     </View>
   );
 };
@@ -60,6 +77,16 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 5,
   },
+  linkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  link: {
+    color: 'blue',
+    textDecorationLine: 'underline',
+  }
 });
 
 export default LoginScreen;
+

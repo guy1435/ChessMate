@@ -110,8 +110,8 @@ function FENToBoard(fenString) {
   return newBoard;
 }
 
-const Board = ({ route, userEmail }) => {
-  const { roomId } = route.params;
+const Board = ({ route }) => {
+  const { roomId , userEmail} = route.params;
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [isWhiteTurn, setIsWhiteTurn] = useState(true);
   const [board, setBoard] = useState([
@@ -174,12 +174,12 @@ const Board = ({ route, userEmail }) => {
         setPlayerColor('black');
         return;
       }
-
+      console.log(roomData.whitePlayer,roomData.blackPlayer,userEmail,roomData.whitePlayer===userEmail);
       // Assign player color based on room occupancy
       let updates = {};
       if (!roomData.whitePlayer) {
         // First player joins - assign white
-        updates = {
+         updates = {
           IsEmpty: false, // Room is no longer empty
           whitePlayer: userEmail, // Assign the user as the white player
         };
@@ -190,7 +190,7 @@ const Board = ({ route, userEmail }) => {
           IsFull: true, // Room is now full
           blackPlayer: userEmail, // Assign the user as the black player
         };
-        setPlayerColor('white');
+        setPlayerColor('black');
       }
 
       // Update the room in Firestore

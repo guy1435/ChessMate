@@ -22,7 +22,7 @@ const CreateRoom = ({ navigation }) => {
         createdBy: user.email, // Store the creator's email
       });
       Alert.alert("Room Created", `Room ID: ${newRoomId}`);
-      navigation.navigate('Board', { roomId: newRoomId }); // Navigate to the Board with the new room ID
+      navigation.navigate('Board', { roomId: newRoomId, userEmail: userEmail }); // Navigate to the Board with the new room ID
     } catch (error) {
       Alert.alert("Error creating room:", error.message);
     }

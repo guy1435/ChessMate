@@ -4,7 +4,7 @@ import { getFirestore, collection, addDoc, doc, setDoc } from 'firebase/firestor
 
 const CreateRoom = ({ navigation, route }) => {
   const [creating, setCreating] = useState(false);
-  const userEmail = route.params?.userEmail || 'Guest';
+  const userEmail = route.params?.userEmail || 'Guesta';
 
   const handleCreateRoom = async () => {
     if (creating) return; // Prevent multiple clicks
@@ -26,7 +26,7 @@ const CreateRoom = ({ navigation, route }) => {
         blackPlayer: null, // No black player assigned yet
         createdAt: new Date() // Current timestamp
       });
-      
+
       console.log("New room created with ID:", newRoomId);
       console.log("Room data being written:", {
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',

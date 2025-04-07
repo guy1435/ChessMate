@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { app } from '../firebaseConfig';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { UserContext } from '../UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const db = getFirestore(app);
 
 const RoomSelectionScreen = ({ navigation, route }) => {
-  const userEmail = route.params?.userEmail || 'Guest';
-  
+  const { userEmail, setUserEmail } = useContext(UserContext);
+  const { userEmail: routeUserEmail } = route.params;
+
+  const generateRoomId = () => {
+    return 'room_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  };
+
   const createRoom = async (userEmail) => {
     try {
       console.log("Creating room with email:", userEmail);
@@ -38,16 +45,41 @@ const RoomSelectionScreen = ({ navigation, route }) => {
   const handleCreateRoom = async () => {
     try {
       const roomId = await createRoom(userEmail);
-      navigation.navigate('Board', { roomId, userEmail });
+      setUserEmail(userEmail);
+      navigation.navigate('Board', { 
+        roomId: roomId,
+        userEmail: userEmail,
+        isNewRoom: true
+      });
     } catch (error) {
       Alert.alert("Error", "Failed to create room: " + error.message);
     }
   };
 
   const handleJoinRoom = () => {
-    // Navigate to the Join Room screen
-    navigation.navigate('JoinRoom'); // Ensure you have a JoinRoom screen set up
+    navigation.navigate('JoinRoom', { userEmail: userEmail });
   };
+
+  useEffect(() => {
+    const getUserEmail = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem('userEmail');
+        if (storedEmail !== null) {
+          // Use storedEmail here
+        }
+      } catch (error) {
+        console.error('Error retrieving user email:', error);
+      }
+    };
+    
+    getUserEmail();
+  }, []);
+
+  useEffect(() => {
+    if (route.params?.userEmail) {
+      setUserEmail(route.params.userEmail);
+    }
+  }, [route.params?.userEmail, setUserEmail]);
 
   return (
     <View style={styles.container}>
